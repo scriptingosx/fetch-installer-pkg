@@ -573,12 +573,12 @@ def main():
     # print("Package URL is %s" % package_url)
     download_pkg = replicate_url(package_url, current_dir, True)
     
-    pkg_name = ('InstallAssitant-%s-%s' % (product_info[product_id]['version'],
+    pkg_name = ('InstallAssitant-%s-%s.pkg' % (product_info[product_id]['version'],
                 product_info[product_id]['BUILD']))
     
     # hard link the downloaded file to cwd
     local_pkg = os.path.join(current_dir, pkg_name)
-    os.link(pkg_name, local_pkg)
+    os.link(download_pkg, local_pkg)
     
     # unlink download
     os.unlink(download_pkg)
