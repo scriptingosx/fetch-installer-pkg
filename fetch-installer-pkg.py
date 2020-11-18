@@ -419,30 +419,34 @@ def main():
               file=sys.stderr)
         exit(-1)
 
-    # display a menu of choices (some seed catalogs have multiple installers)
-    print('%2s %14s %10s %8s %11s  %s'
-          % ('#', 'ProductID', 'Version', 'Build', 'Post Date', 'Title'))
-    for index, product_id in enumerate(product_info):
-        print('%2s %14s %10s %8s %11s  %s' % (
-            index + 1,
-            product_id,
-            product_info[product_id].get('version', 'UNKNOWN'),
-            product_info[product_id].get('BUILD', 'UNKNOWN'),
-            product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
-            product_info[product_id]['title']
-        ))
+    if len(product_info) > 1:
+        # display a menu of choices (some seed catalogs have multiple installers)
+        print('%2s %14s %10s %8s %11s  %s'
+              % ('#', 'ProductID', 'Version', 'Build', 'Post Date', 'Title'))
+        for index, product_id in enumerate(product_info):
+            print('%2s %14s %10s %8s %11s  %s' % (
+                index + 1,
+                product_id,
+                product_info[product_id].get('version', 'UNKNOWN'),
+                product_info[product_id].get('BUILD', 'UNKNOWN'),
+                product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
+                product_info[product_id]['title']
+            ))
 
-    answer = get_input(
-        '\nChoose a product to download (1-%s): ' % len(product_info))
-    try:
-        index = int(answer) - 1
-        if index < 0:
-            raise ValueError
-        product_id = list(product_info.keys())[index]
-    except (ValueError, IndexError):
-        print('Exiting.')
-        exit(0)
+        answer = get_input(
+            '\nChoose a product to download (1-%s): ' % len(product_info))
+        try:
+            index = int(answer) - 1
+            if index < 0:
+                raise ValueError
+            product_id = list(product_info.keys())[index]
+        except (ValueError, IndexError):
+            print('Exiting.')
+            exit(0)
+    else:
+        product_id = list(product_info.keys())[0]
     
+    print(product_id)
     product = catalog['Products'][product_id]
     
     # determine the InstallAssistant pkg url
@@ -462,7 +466,7 @@ def main():
     os.link(download_pkg, local_pkg)
     
     # unlink download
-    os.unlink(download_pkg)
+    #os.unlink(download_pkg)
     
     # reveal in Finder
     open_cmd = ['open', '-R', local_pkg]
