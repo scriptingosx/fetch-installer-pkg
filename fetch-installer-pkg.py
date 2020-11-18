@@ -126,117 +126,6 @@ def get_default_catalog():
     return DEFAULT_SUCATALOGS.get(darwin_major)
 
 
-def make_sparse_image(volume_name, output_path):
-    '''Make a sparse disk image we can install a product to'''
-    cmd = ['/usr/bin/hdiutil', 'create', '-size', '16g', '-fs', 'HFS+',
-           '-volname', volume_name, '-type', 'SPARSE', '-plist', output_path]
-    try:
-        output = subprocess.check_output(cmd)
-    except subprocess.CalledProcessError as err:
-        print(err, file=sys.stderr)
-        exit(-1)
-    try:
-        return read_plist_from_string(output)[0]
-    except IndexError as err:
-        print('Unexpected output from hdiutil: %s' % output, file=sys.stderr)
-        exit(-1)
-    except ExpatError as err:
-        print('Malformed output from hdiutil: %s' % output, file=sys.stderr)
-        print(err, file=sys.stderr)
-        exit(-1)
-
-
-def make_compressed_dmg(app_path, diskimagepath):
-    """Returns path to newly-created compressed r/o disk image containing
-    Install macOS.app"""
-
-    print('Making read-only compressed disk image containing %s...'
-          % os.path.basename(app_path))
-    cmd = ['/usr/bin/hdiutil', 'create', '-fs', 'HFS+',
-           '-srcfolder', app_path, diskimagepath]
-    try:
-        subprocess.check_call(cmd)
-    except subprocess.CalledProcessError as err:
-        print(err, file=sys.stderr)
-    else:
-        print('Disk image created at: %s' % diskimagepath)
-
-
-def mountdmg(dmgpath):
-    """
-    Attempts to mount the dmg at dmgpath and returns first mountpoint
-    """
-    mountpoints = []
-    dmgname = os.path.basename(dmgpath)
-    cmd = ['/usr/bin/hdiutil', 'attach', dmgpath,
-           '-mountRandom', '/tmp', '-nobrowse', '-plist',
-           '-owners', 'on']
-    proc = subprocess.Popen(cmd, bufsize=-1,
-                            stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    (pliststr, err) = proc.communicate()
-    if proc.returncode:
-        print('Error: "%s" while mounting %s.' % (err, dmgname),
-              file=sys.stderr)
-        return None
-    if pliststr:
-        plist = read_plist_from_string(pliststr)
-        for entity in plist['system-entities']:
-            if 'mount-point' in entity:
-                mountpoints.append(entity['mount-point'])
-
-    return mountpoints[0]
-
-
-def unmountdmg(mountpoint):
-    """
-    Unmounts the dmg at mountpoint
-    """
-    proc = subprocess.Popen(['/usr/bin/hdiutil', 'detach', mountpoint],
-                            bufsize=-1, stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE)
-    (dummy_output, err) = proc.communicate()
-    if proc.returncode:
-        print('Polite unmount failed: %s' % err, file=sys.stderr)
-        print('Attempting to force unmount %s' % mountpoint, file=sys.stderr)
-        # try forcing the unmount
-        retcode = subprocess.call(['/usr/bin/hdiutil', 'detach', mountpoint,
-                                   '-force'])
-        if retcode:
-            print('Failed to unmount %s' % mountpoint, file=sys.stderr)
-
-
-def install_product(dist_path, target_vol):
-    '''Install a product to a target volume.
-    Returns a boolean to indicate success or failure.'''
-    # set CM_BUILD env var to make Installer bypass eligibilty checks
-    # when installing packages (for machine-specific OS builds)
-    os.environ["CM_BUILD"] = "CM_BUILD"
-    cmd = ['/usr/sbin/installer', '-pkg', dist_path, '-target', target_vol]
-    try:
-        subprocess.check_call(cmd)
-    except subprocess.CalledProcessError as err:
-        print(err, file=sys.stderr)
-        return False
-    else:
-        # Apple postinstall script bug ends up copying files to a path like
-        # /tmp/dmg.T9ak1HApplications
-        path = target_vol + 'Applications'
-        if os.path.exists(path):
-            print('*********************************************************')
-            print('*** Working around a very dumb Apple bug in a package ***')
-            print('*** postinstall script that fails to correctly target ***')
-            print('*** the Install macOS.app when installed to a volume  ***')
-            print('*** other than the current boot volume.               ***')
-            print('***       Please file feedback with Apple!            ***')
-            print('*********************************************************')
-            subprocess.check_call(
-                ['/usr/bin/ditto',
-                 path,
-                 os.path.join(target_vol, 'Applications')]
-            )
-            subprocess.check_call(['/bin/rm', '-r', path])
-        return True
-
 class ReplicationError(Exception):
     '''A custom error when replication fails'''
     pass
@@ -499,14 +388,6 @@ def main():
     args = parser.parse_args()
 
     current_dir = os.getcwd()
-    if os.path.expanduser("~") in current_dir:
-        bad_dirs = ['Documents', 'Desktop', 'Downloads', 'Library']
-        for bad_dir in bad_dirs:
-            if bad_dir in os.path.split(current_dir):
-                print('Running this script from %s may not work as expected. '
-                      'If this does not run as expected, please run again from '
-                      'somewhere else, such as /Users/Shared.'
-                      % current_dir, file=sys.stderr)
 
     if args.catalogurl:
         su_catalog_url = args.catalogurl
@@ -529,7 +410,7 @@ def main():
     catalog = download_and_parse_sucatalog(
         su_catalog_url, args.workdir, ignore_cache=args.ignore_cache)
     
-    print(catalog)
+    # print(catalog)
     product_info = os_installer_product_info(
         catalog, args.workdir, ignore_cache=args.ignore_cache)
 
@@ -571,13 +452,13 @@ def main():
             break
     
     # print("Package URL is %s" % package_url)
-    download_pkg = replicate_url(package_url, current_dir, True)
+    download_pkg = replicate_url(package_url, args.workdir, True, ignore_cache=args.ignore_cache)
     
-    pkg_name = ('InstallAssitant-%s-%s.pkg' % (product_info[product_id]['version'],
+    pkg_name = ('InstallAssistant-%s-%s.pkg' % (product_info[product_id]['version'],
                 product_info[product_id]['BUILD']))
     
     # hard link the downloaded file to cwd
-    local_pkg = os.path.join(current_dir, pkg_name)
+    local_pkg = os.path.join(args.workdir, pkg_name)
     os.link(download_pkg, local_pkg)
     
     # unlink download
