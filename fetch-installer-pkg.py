@@ -6,7 +6,8 @@
 # based on Greg Neagle's 'installinstallmacos.py'
 # https://github.com/munki/macadmin-scripts/blob/main/installinstallmacos.py
 #
-# with many thanks to Greg Neagle and Mike Lynne
+# with many thanks to Greg Neagle for the original script and lots of advice
+# and Mike Lynn for helping me figure out the software update catalog
 
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -317,7 +318,7 @@ def os_installer_product_info(catalog, workdir, ignore_cache=False):
         dist_url = distributions.get('English') or distributions.get('en')
         try:
             dist_path = replicate_url(
-                dist_url, root_dir=workdir, ignore_cache=ignore_cache)
+                dist_url, root_dir=workdir, show_progress=False, ignore_cache=ignore_cache)
         except ReplicationError as err:
             print('Could not replicate %s: %s' % (dist_url, err),
                   file=sys.stderr)
@@ -443,10 +444,18 @@ def main():
         except (ValueError, IndexError):
             print('Exiting.')
             exit(0)
-    else:
+    else: # only one product found
         product_id = list(product_info.keys())[0]
+        print("Found a single installer:")
+        print('%14s %10s %8s %11s  %s' % (
+            product_id,
+            product_info[product_id].get('version', 'UNKNOWN'),
+            product_info[product_id].get('BUILD', 'UNKNOWN'),
+            product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
+            product_info[product_id]['title']
+        ))
+
     
-    print(product_id)
     product = catalog['Products'][product_id]
     
     # determine the InstallAssistant pkg url
