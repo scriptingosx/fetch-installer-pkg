@@ -8,6 +8,9 @@
 #
 # with many thanks to Greg Neagle for the original script and lots of advice
 # and Mike Lynn for helping me figure out the software update catalog
+# Graham R Pugh for figurung out the 11.1 download
+# see his combined version of mine and Greg's script here:
+# https://github.com/grahampugh/erase-install/tree/pkg
 
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -49,6 +52,15 @@ import xattr
 
 
 DEFAULT_SUCATALOGS = {
+    '17': 'https://swscan.apple.com/content/catalogs/others/'
+          'index-10.13-10.12-10.11-10.10-10.9'
+          '-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog',
+    '18': 'https://swscan.apple.com/content/catalogs/others/'
+          'index-10.14-10.13-10.12-10.11-10.10-10.9'
+          '-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog',
+    '19': 'https://swscan.apple.com/content/catalogs/others/'
+          'index-10.15-10.14-10.13-10.12-10.11-10.10-10.9'
+          '-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog',
     '20': 'https://swscan.apple.com/content/catalogs/others/'
           'index-11-10.15-10.14-10.13-10.12-10.11-10.10-10.9'
           '-mountainlion-lion-snowleopard-leopard.merged-1.sucatalog',
@@ -279,7 +291,7 @@ def download_and_parse_sucatalog(sucatalog, workdir, ignore_cache=False):
             exit(-1)
 
 
-def find_mac_os_installers(catalog):
+def find_mac_os_installers(catalog, installassistant_pkg_only=False):
     '''Return a list of product identifiers for what appear to be macOS
     installers'''
     mac_os_installer_products = []
@@ -287,16 +299,13 @@ def find_mac_os_installers(catalog):
         for product_key in catalog['Products'].keys():
             product = catalog['Products'][product_key]
             try:
-                if product['ExtendedMetaInfo'][
-                        'InstallAssistantPackageIdentifiers']:
-                    if product['ExtendedMetaInfo'][
-                        'InstallAssistantPackageIdentifiers'
-                        ]['SharedSupport'] == 'com.apple.pkg.InstallAssistant.macOSBigSur':
+                if product['ExtendedMetaInfo']['InstallAssistantPackageIdentifiers']:
+                    if product['ExtendedMetaInfo']['InstallAssistantPackageIdentifiers'
+                        ]['SharedSupport']:
                         mac_os_installer_products.append(product_key)
             except KeyError:
                 continue
     return mac_os_installer_products
-
 
 def os_installer_product_info(catalog, workdir, ignore_cache=False):
     '''Returns a dict of info about products that look like macOS installers'''
@@ -359,15 +368,6 @@ def replicate_product(catalog, product_id, workdir, ignore_cache=False):
                 print('Could not replicate %s: %s'
                       % (package['MetadataURL'], err), file=sys.stderr)
                 exit(-1)
-
-
-def find_installer_app(mountpoint):
-    '''Returns the path to the Install macOS app on the mountpoint'''
-    applications_dir = os.path.join(mountpoint, 'Applications')
-    for item in os.listdir(applications_dir):
-        if item.endswith('.app'):
-            return os.path.join(applications_dir, item)
-    return None
 
 
 def main():
