@@ -12,6 +12,8 @@ When you run the script it will present you with all the Big Sur Installers it f
 
 Add the `--help` argument for further options.
 
+I have a [post on different strategies to deploy the macOS installer application](https://scriptingosx.com/2020/11/deploying-the-big-sur-installer-application/) on my blog.
+
 ### Credits
 
 Many thanks to Greg Neagle for the [original script](https://github.com/munki/macadmin-scripts/blob/main/installinstallmacos.py) and lots of advice and Mike Lynn for helping me figure out the software update catalog.
