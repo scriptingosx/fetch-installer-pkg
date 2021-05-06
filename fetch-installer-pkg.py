@@ -388,6 +388,8 @@ def main():
                         help='Ignore any previously cached files.')
     parser.add_argument('--latest', action='store_true',
                         help='Download the latest version with no user interaction.')
+    parser.add_argument('--version', default='',
+                        help='Download the latest version with no user interaction.')
     args = parser.parse_args()
 
     current_dir = os.getcwd()
@@ -428,40 +430,53 @@ def main():
               % ('#', 'ProductID', 'Version', 'Build', 'Post Date', 'Title'))
         # sort the list by release date
         sorted_product_info = sorted(product_info, key=lambda k: product_info[k]['PostDate'], reverse=True)
-        for index, product_id in enumerate(sorted_product_info):
-            print('%2s %14s %10s %8s %11s  %s' % (
-                index + 1,
-                product_id,
-                product_info[product_id].get('version', 'UNKNOWN'),
-                product_info[product_id].get('BUILD', 'UNKNOWN'),
-                product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
-                product_info[product_id]['title']
-            ))
-
-        answer = get_input(
-            '\nChoose a product to download (1-%s): ' % len(product_info))
-        try:
-            index = int(answer) - 1
-            if index < 0:
-                raise ValueError
-            product_id = list(product_info.keys())[index]
-        except (ValueError, IndexError):
-            print('Exiting.')
-            exit(0)
+        
+        if args.latest:
+            product_id = sorted_product_info[0]
+        elif args.version:
+            found_version = False
+            for index, product_id in enumerate(sorted_product_info):
+                if (product_info[product_id]['version'] == args.version):
+                    found_version = True
+                    break
+            if found_version != True:
+                print("Couldn't find version, Exiting.")
+                exit(1)
+        else:
+            for index, product_id in enumerate(sorted_product_info):
+                print('%2s %14s %10s %8s %11s  %s' % (
+                    index + 1,
+                    product_id,
+                    product_info[product_id].get('version', 'UNKNOWN'),
+                    product_info[product_id].get('BUILD', 'UNKNOWN'),
+                    product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
+                    product_info[product_id]['title']
+                ))
+            answer = get_input(
+                '\nChoose a product to download (1-%s): ' % len(product_info))
+            try:
+                index = int(answer) - 1
+                if index < 0:
+                    raise ValueError
+                product_id = list(product_info.keys())[index]
+            except (ValueError, IndexError):
+                print('Exiting.')
+                exit(0)
     else: # only one product found
         product_id = list(product_info.keys())[0]
         print("Found a single installer:")
-        print('%14s %10s %8s %11s  %s' % (
-            product_id,
-            product_info[product_id].get('version', 'UNKNOWN'),
-            product_info[product_id].get('BUILD', 'UNKNOWN'),
-            product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
-            product_info[product_id]['title']
-        ))
 
     
     product = catalog['Products'][product_id]
     
+    print('%14s %10s %8s %11s  %s' % (
+        product_id,
+        product_info[product_id].get('version', 'UNKNOWN'),
+        product_info[product_id].get('BUILD', 'UNKNOWN'),
+        product_info[product_id]['PostDate'].strftime('%Y-%m-%d'),
+        product_info[product_id]['title']
+    ))
+
     # determine the InstallAssistant pkg url
     for package in product['Packages']:
         package_url = package['URL']
