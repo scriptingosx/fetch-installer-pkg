@@ -386,6 +386,8 @@ def main():
                         'directory.')
     parser.add_argument('--ignore-cache', action='store_true',
                         help='Ignore any previously cached files.')
+    parser.add_argument('--latest', action='store_true',
+                        help='Download the latest version with no user interaction.')
     args = parser.parse_args()
 
     current_dir = os.getcwd()
@@ -424,7 +426,9 @@ def main():
         # display a menu of choices (some seed catalogs have multiple installers)
         print('%2s %14s %10s %8s %11s  %s'
               % ('#', 'ProductID', 'Version', 'Build', 'Post Date', 'Title'))
-        for index, product_id in enumerate(product_info):
+        # sort the list by release date
+        sorted_product_info = sorted(product_info, key=lambda k: product_info[k]['PostDate'], reverse=True)
+        for index, product_id in enumerate(sorted_product_info):
             print('%2s %14s %10s %8s %11s  %s' % (
                 index + 1,
                 product_id,
