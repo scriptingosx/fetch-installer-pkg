@@ -458,7 +458,7 @@ def main():
                 index = int(answer) - 1
                 if index < 0:
                     raise ValueError
-                product_id = list(product_info.keys())[index]
+                product_id = sorted_product_info[index]
             except (ValueError, IndexError):
                 print('Exiting.')
                 exit(0)
